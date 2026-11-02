@@ -1,0 +1,41 @@
+// Dev-run options for testing sync with several clients on one machine.
+//   gradlew runClient -Pjoin=127.0.0.1:25570                   connect to a server after the main menu loads
+//   gradlew runClient -PclientDir=run/client2 -Pusername=Alex  a second client with its own game folder
+//                                                              (JourneyMap data, configs) and player name
+//   -PheapMb=1536                                              max heap for runClient/runServer (RFG default is 4-6 GB)
+
+tasks.named("runClient", JavaExec).configure {
+    if (project.hasProperty("join")) {
+        String[] hostPort = project.property("join").toString().split(":")
+        args("--server", hostPort[0], "--port", hostPort.length > 1 ? hostPort[1] : "25565")
+    }
+    if (project.hasProperty("clientDir")) {
+        workingDir = file(project.property("clientDir"))
+    }
+    if (project.hasProperty("username")) {
+        username = project.property("username").toString()
+    }
+}
+
+// RCON Fix is a core mod; FML only loads core mods from the classpath when they're named here.
+// See dependencies.gradle for where the jar comes from.
+boolean hasRconFix = !(fileTree("libs") { include "rconfix-*-dev.jar" } + fileTree("../gtnh-rcon-fix/build/libs") {
+    include "rconfix-*-dev.jar"
+}).isEmpty()
+if (hasRconFix) {
+    tasks.named("runServer", JavaExec).configure {
+        systemProperty("fml.coreMods.load", "com.rconfix.core.RconFixCore")
+    }
+}
+
+if (project.hasProperty("heapMb")) {
+    ["runClient", "runServer"].each { name ->
+        tasks.named(name, JavaExec).configure {
+            String heap = "${project.property("heapMb")}M"
+            doFirst {
+                minHeapSize = "512M"
+                maxHeapSize = heap
+            }
+        }
+    }
+}
