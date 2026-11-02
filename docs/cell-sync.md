@@ -32,6 +32,8 @@ Applying never calls `setChunkImage`, so received cells are never captured and s
 
 **Seeding.** Maps players drew before installing the mod are uploaded once as *fill-only* patches: they only fill pixels the server has never seen, so an old map never overwrites newer shared data.
 
+Before seeding, the client fills its current folder from JourneyMap folders for the same world id under other server-list names (`OlderMaps`), most recently drawn first, empty pixels only. The server never echoes a player's own cells back, so the merge happens locally and the normal seed uploads the result.
+
 **Handshake.** At login the server greets every player with its protocol version and the shared map's id. A client that gets no greeting sends nothing, so the mod is optional on both sides. Once JourneyMap has settled on this world's folder (it moves the folder when JourneyMap Server's world id arrives, so the client waits up to 15 s for the id, and starts over if the folder still moves), the client says hello.
 
 **Catch-up.** The client remembers, per server world, the last revision it has fully received. Its hello carries that number, and the server queues every cell with a higher revision, tile by tile, followed by a mark saying "everything up to revision N has been sent". The client stores N once it has applied everything before the mark. A new player starts at 0 and gets the whole map.

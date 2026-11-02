@@ -61,4 +61,24 @@ public class TileImageTest {
         tile.merge(1023, gradient, false);
         assertArrayEquals(gradient, tile.cell(1023));
     }
+
+    @Test
+    public void fillFromAddsOnlyPixelsThisTileLacks() {
+        TileImage current = new TileImage();
+        current.merge(0, cell(0xFF000001), false);
+        int[] half = cell(0xFF000002);
+        for (int i = 0; i < 128; i++) half[i] = 0;
+        current.merge(1, half, false);
+        TileImage older = new TileImage();
+        older.merge(0, cell(0xFF0000AA), false);
+        older.merge(1, cell(0xFF0000BB), false);
+        older.merge(2, cell(0xFF0000CC), false);
+
+        assertArrayEquals(new int[] { 1, 2 }, current.fillFrom(older));
+        assertArrayEquals(cell(0xFF000001), current.cell(0));
+        assertEquals(0xFF0000BB, current.cell(1)[0]);
+        assertEquals(0xFF000002, current.cell(1)[255]);
+        assertArrayEquals(cell(0xFF0000CC), current.cell(2));
+        assertEquals(0, current.fillFrom(older).length);
+    }
 }

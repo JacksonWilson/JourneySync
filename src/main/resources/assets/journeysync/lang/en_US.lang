@@ -1,6 +1,7 @@
 journeysync.chat.sync_start=JourneySync: syncing the shared map
 journeysync.chat.sync_complete=JourneySync: shared map up to date (%d chunks received)
 journeysync.chat.seed_complete=JourneySync: uploaded your existing map (%d region files)
+journeysync.chat.older_maps=JourneySync: added your map from %d older folder(s) for this world (%d region files, %d waypoints)
 journeysync.chat.paused=JourneySync: uploads paused
 journeysync.chat.resumed=JourneySync: uploads resumed
 journeysync.chat.status=JourneySync: %s

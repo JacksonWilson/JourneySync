@@ -8,6 +8,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -17,6 +20,23 @@ import javax.imageio.ImageIO;
 public final class TileFiles {
 
     private TileFiles() {}
+
+    /** Region image files under a JourneyMap world folder, for every dimension and map type. */
+    public static List<File> listTiles(File worldDir) {
+        List<File> out = new ArrayList<>();
+        File[] dims = worldDir == null ? null : worldDir.listFiles((d, name) -> name.startsWith("DIM"));
+        if (dims == null) return out;
+        for (File dim : dims) {
+            File[] types = dim.listFiles(File::isDirectory);
+            if (types == null) continue;
+            for (File type : types) {
+                if (TileId.parseType(type.getName()) < 0) continue;
+                File[] files = type.listFiles((d, name) -> name.endsWith(".png"));
+                if (files != null) Collections.addAll(out, files);
+            }
+        }
+        return out;
+    }
 
     /** Reads a tile PNG, or returns a blank tile if the file is missing or isn't a 512x512 image. */
     public static int[] readPixels(File png) throws IOException {

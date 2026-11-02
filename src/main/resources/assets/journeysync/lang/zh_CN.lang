@@ -1,6 +1,7 @@
 journeysync.chat.sync_start=JourneySync：正在同步共享地图
 journeysync.chat.sync_complete=JourneySync：共享地图已是最新（收到 %d 个区块）
 journeysync.chat.seed_complete=JourneySync：已上传你原有的地图（%d 个区域文件）
+journeysync.chat.older_maps=JourneySync：已从此世界的 %d 个旧地图文件夹并入你的地图（%d 个区域文件，%d 个路径点）
 journeysync.chat.paused=JourneySync：上传已暂停
 journeysync.chat.resumed=JourneySync：上传已恢复
 journeysync.chat.status=JourneySync：%s

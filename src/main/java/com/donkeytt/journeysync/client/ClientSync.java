@@ -3,7 +3,6 @@ package com.donkeytt.journeysync.client;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -356,10 +355,22 @@ public final class ClientSync {
             JourneySync.LOG.info("No local map files for this server; asking for the whole shared map");
             since = 0;
         }
+        if (Config.seedExistingMap && !state.seeded) mergeOlderMaps();
         // Snapshot the files the player drew before syncing; received cells will be merged into them.
-        seedSnapshot = Config.seedExistingMap && !state.seeded ? listTileFiles(worldDir) : null;
+        seedSnapshot = Config.seedExistingMap && !state.seeded ? TileFiles.listTiles(worldDir) : null;
         PacketHandler.sendToServer(new HelloPacket(Tags.VERSION, state.worldId, since));
         JourneySync.LOG.info("Asked for map {} from revision {}", state.worldId, since);
+    }
+
+    /** Fills this world's folder from folders JourneyMap made for it under other server-list names. */
+    private void mergeOlderMaps() {
+        List<File> older = OlderMaps.find(worldDir, JmBridge.currentWorldId());
+        if (older.isEmpty()) return;
+        OlderMaps.Result merged = OlderMaps.mergeAll(older, worldDir);
+        if (merged.waypoints > 0) MainThreadQueue.CLIENT.execute(JmBridge::resetWaypoints);
+        if (merged.tiles > 0 || merged.waypoints > 0) {
+            chat("journeysync.chat.older_maps", merged.folders, merged.tiles, merged.waypoints);
+        }
     }
 
     private void handleMark(long rev, boolean catchUpDone) {
@@ -527,25 +538,9 @@ public final class ClientSync {
         lastStateSave = System.currentTimeMillis();
     }
 
-    /** Region image files under JourneyMap's world folder, for every dimension and map type. */
-    private static List<File> listTileFiles(File dir) {
-        List<File> out = new ArrayList<>();
-        File[] dims = dir == null ? null : dir.listFiles((d, name) -> name.startsWith("DIM"));
-        if (dims == null) return out;
-        for (File dim : dims) {
-            File[] types = dim.listFiles(File::isDirectory);
-            if (types == null) continue;
-            for (File type : types) {
-                if (TileId.parseType(type.getName()) < 0) continue;
-                File[] files = type.listFiles((d, name) -> name.endsWith(".png"));
-                if (files != null) java.util.Collections.addAll(out, files);
-            }
-        }
-        return out;
-    }
-
     private static boolean hasLocalMap(File dir) {
-        return !listTileFiles(dir).isEmpty();
+        return !TileFiles.listTiles(dir)
+            .isEmpty();
     }
 
     private static TileId tileIdOf(File png) {

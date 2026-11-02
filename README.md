@@ -29,6 +29,8 @@ After that, a rejoining player only gets the chunks that changed while they were
 
 Chat says `JourneySync: syncing the shared map` on join, then `shared map up to date (N chunks received)`, and after the first join, `uploaded your existing map (N region files)`.
 
+JourneyMap names each server's map folder after its entry in your server list, so renaming the entry starts a new, empty folder for the same world. Before your first upload, JourneySync looks for other folders with the same JourneyMap Server world id and fills your current map from them. It only fills empty pixels, so your current map wins, and it copies waypoints your current folder doesn't have. Chat then says `added your map from N older folder(s) for this world`. Folders without a world id are left alone, because "Minecraft Server" is the default name for every server you add.
+
 | Command | Effect |
 |---|---|
 | `/jsync status` | Sync state, chunks received and sent, how far the one-time upload has got, and the stored revision |

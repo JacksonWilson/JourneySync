@@ -63,6 +63,17 @@ public final class TileImage {
         return changed;
     }
 
+    /** Fills this tile's transparent pixels from {@code other}. Returns the indices of the cells that changed. */
+    public int[] fillFrom(TileImage other) {
+        int[] changed = new int[CELLS];
+        int n = 0;
+        for (int i = 0; i < CELLS; i++) {
+            int[] cell = other.cell(i);
+            if (!isEmpty(cell) && merge(i, cell, true)) changed[n++] = i;
+        }
+        return java.util.Arrays.copyOf(changed, n);
+    }
+
     /** True if every pixel of the cell is transparent. */
     public static boolean isEmpty(int[] cell) {
         for (int p : cell) {
