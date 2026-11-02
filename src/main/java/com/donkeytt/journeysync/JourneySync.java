@@ -14,7 +14,17 @@ import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLServerStartingEvent;
 import cpw.mods.fml.common.event.FMLServerStoppingEvent;
 
-@Mod(modid = JourneySync.MODID, version = Tags.VERSION, name = "JourneySync", acceptedMinecraftVersions = "[1.7.10]")
+/**
+ * {@code acceptableRemoteVersions = "*"}: FML never refuses a connection over JourneySync, so players without it can
+ * join and players on different builds can still play together. Whether two sides sync is decided by JourneySync's
+ * own handshake ({@code PacketHandler.PROTOCOL_VERSION}).
+ */
+@Mod(
+    modid = JourneySync.MODID,
+    version = Tags.VERSION,
+    name = "JourneySync",
+    acceptedMinecraftVersions = "[1.7.10]",
+    acceptableRemoteVersions = "*")
 public class JourneySync {
 
     public static final String MODID = "journeysync";

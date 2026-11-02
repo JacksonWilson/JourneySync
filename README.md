@@ -8,7 +8,11 @@ Requires JourneyMap 5.2.x for 1.7.10 (GTNH 2.9.0 ships 5.2.23) and UniMixins, wh
 
 ## Install
 
-Put the jar in the `mods` folder of the server and of every player who wants the shared map. Players without it can still join, and a client with it does nothing on a server without it.
+Put the jar in the `mods` folder of the server and of every player who wants the shared map. The mod is optional on both sides:
+
+- Players without it can join a server that has it. They just don't get the shared map.
+- A player with it can join a server without it. After 10 seconds without an answer it stops trying, and `/jsync status` says the server doesn't have JourneySync.
+- Different builds can play together. They sync if their protocol versions match; otherwise chat says the versions differ and that player doesn't sync.
 
 The first time a player joins:
 
@@ -63,7 +67,10 @@ Deleting the folder starts a new shared map. Clients notice the new id and start
 .\scripts\two-clients.ps1 -Start        # dev server on 127.0.0.1:25570 plus muted clients "Developer" and "Alex"
 .\scripts\two-clients.ps1 -Stop
 python scripts\compare-maps.py --kind day   # explored pixels per tile: each client and the server
+.\scripts\optional-test.ps1             # a client without the mod joins; a client with it joins a server without it
 ```
+
+`-PwithoutJourneySync` on `runClient` or `runServer` leaves this mod out of that run, for testing mixed setups.
 
 Put `journeymap-1.7.10-5.2.23-unlimited.jar` in `libs/` for dev runs. Without it, the build compiles against Modrinth's JourneyMap 5.2.20. The two-client script drives players over RCON, which needs [gtnh-rcon-fix](../gtnh-rcon-fix) built next to this repo, because vanilla 1.7.10 RCON drops the connection after login. The dev server needs `run/server/server.properties` with `server-ip=127.0.0.1`, `online-mode=false` and `enable-rcon=true`, and an `eula.txt` you accept yourself.
 

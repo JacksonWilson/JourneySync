@@ -50,6 +50,8 @@ public final class ClientSync {
     private static final long DISK_FLUSH_MILLIS = 250;
     private static final long WAYPOINT_SCAN_MILLIS = 5_000;
     private static final long STATE_SAVE_MILLIS = 10_000;
+    /** A server with JourneySync answers the hello at once; without an answer by then, assume it doesn't have it. */
+    private static final long HELLO_TIMEOUT_MILLIS = 10_000;
 
     public static ClientSync instance() {
         return INSTANCE;
@@ -61,7 +63,9 @@ public final class ClientSync {
         HELLO_SENT,
         CATCHING_UP,
         SYNCED,
-        UNSUPPORTED
+        UNSUPPORTED,
+        /** The server never answered the hello: it doesn't have JourneySync. A late answer still starts syncing. */
+        NO_SERVER_MOD
     }
 
     private static final class BlobAssembly {
@@ -80,6 +84,7 @@ public final class ClientSync {
     private volatile int seedDone;
     private volatile int seedTotal;
     private volatile long lastRevShown;
+    private volatile long helloSentAt;
     private final BlockingQueue<Runnable> events = new LinkedBlockingQueue<>();
     private final BlockingQueue<ChatComponentTranslation> chat = new LinkedBlockingQueue<>();
 
@@ -154,7 +159,10 @@ public final class ClientSync {
             needsWaypointReset = false;
             JmBridge.resetWaypoints();
         }
-        if (phase == Phase.OFFLINE || phase == Phase.UNSUPPORTED || mc.thePlayer == null || mc.theWorld == null) {
+        if (phase == Phase.OFFLINE || phase == Phase.UNSUPPORTED
+            || phase == Phase.NO_SERVER_MOD
+            || mc.thePlayer == null
+            || mc.theWorld == null) {
             return;
         }
         long now = System.currentTimeMillis();
@@ -170,6 +178,8 @@ public final class ClientSync {
             if (dir == null) return;
             worldDir = dir;
             lastDirCheck = now;
+            // Set before the phase: the worker times out HELLO_SENT against this, maybe before sendHello has run.
+            helloSentAt = now;
             phase = Phase.HELLO_SENT;
             events.add(this::sendHello);
         } else if (now - lastDirCheck > DIR_CHECK_MILLIS && JmBridge.isMapping()) {
@@ -243,7 +253,14 @@ public final class ClientSync {
                     event.run();
                     event = events.poll();
                 }
-                if (phase == Phase.CATCHING_UP || phase == Phase.SYNCED) periodicWork();
+                if (phase == Phase.CATCHING_UP || phase == Phase.SYNCED) {
+                    periodicWork();
+                } else
+                    if (phase == Phase.HELLO_SENT && System.currentTimeMillis() - helloSentAt > HELLO_TIMEOUT_MILLIS) {
+                        phase = Phase.NO_SERVER_MOD;
+                        JourneySync.LOG
+                            .info("The server didn't answer; it doesn't have JourneySync. Not syncing maps.");
+                    }
             } catch (InterruptedException e) {
                 return;
             } catch (Throwable t) {
@@ -311,6 +328,7 @@ public final class ClientSync {
         }
         // Snapshot the files the player drew before syncing; received cells will be merged into them.
         seedSnapshot = Config.seedExistingMap && !state.seeded ? listTileFiles(worldDir) : null;
+        helloSentAt = System.currentTimeMillis();
         send(new HelloPacket(true, Tags.VERSION, state.worldId, since));
         JourneySync.LOG
             .info("Sent hello: map {} up to revision {}", state.worldId.isEmpty() ? "(none)" : state.worldId, since);

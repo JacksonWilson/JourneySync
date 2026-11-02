@@ -3,6 +3,8 @@
 //   gradlew runClient -PclientDir=run/client2 -Pusername=Alex  a second client with its own game folder
 //                                                              (JourneyMap data, configs) and player name
 //   -PheapMb=1536                                              max heap for runClient/runServer (RFG default is 4-6 GB)
+//   -PwithoutJourneySync                                       run a client or server without this mod, to test
+//                                                              mixed setups (JourneyMap and RCON Fix stay)
 
 tasks.named("runClient", JavaExec).configure {
     if (project.hasProperty("join")) {
@@ -25,6 +27,23 @@ boolean hasRconFix = !(fileTree("libs") { include "rconfix-*-dev.jar" } + fileTr
 if (hasRconFix) {
     tasks.named("runServer", JavaExec).configure {
         systemProperty("fml.coreMods.load", "com.rconfix.core.RconFixCore")
+    }
+}
+
+if (project.hasProperty("withoutJourneySync")) {
+    // Dev runs load this mod from build/libs/journeysync-*-dev.jar; its late Mixins are found by scanning it, so
+    // dropping the jar (and the class folders, in case a run uses those) leaves a run without JourneySync.
+    String libsDir = file("build/libs").absolutePath
+    List<String> classDirs = [file("build/classes/java/main").absolutePath, file("build/resources/main").absolutePath]
+    ["runClient", "runServer"].each { name ->
+        tasks.named(name, JavaExec).configure {
+            doFirst {
+                classpath = classpath.filter { f ->
+                    !(f.parentFile?.absolutePath == libsDir && f.name.startsWith("journeysync-")) &&
+                        !classDirs.contains(f.absolutePath)
+                }
+            }
+        }
     }
 }
 

@@ -14,4 +14,5 @@ journeysync.status.hello_sent=连接中
 journeysync.status.catching_up=正在下载共享地图
 journeysync.status.synced=已同步
 journeysync.status.unsupported=未启用（没有 JourneyMap 5，或服务端版本不同）
+journeysync.status.no_server_mod=未启用（此服务器没有安装 JourneySync）
 journeysync.status.progress=已收到 %d 个区块，已发送 %d，待发送 %d，原有地图 %d/%d 个文件，版本 %d
