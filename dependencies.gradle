@@ -56,6 +56,33 @@ dependencies {
     if (rconFixJar != null) {
         runtimeOnlyNonPublishable(files(rconFixJar))
     }
-    testImplementation("junit:junit:4.13.2")
-    //runtimeOnlyNonPublishable("com.github.GTNewHorizons:NotEnoughItems:2.7.69-GTNH:dev")
+
+    // Navigator draws the chunk layer on JourneyMap (and Xaero's maps); client side. ServerUtilities provides claims
+    // and teams; server side. Both optional at runtime: the mod checks Loader.isModLoaded before touching either.
+    compileOnly("com.github.GTNewHorizons:Navigator:1.1.10:dev")
+    compileOnly("com.github.GTNewHorizons:ServerUtilities:2.4.22:dev") { transitive = false }
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:Navigator:1.1.10:dev")
+    runtimeOnlyNonPublishable("com.github.GTNewHorizons:ServerUtilities:2.4.22:dev") { transitive = false }
+
+    testImplementation(platform('org.junit:junit-bom:5.9.2'))
+    testImplementation('org.junit.jupiter:junit-jupiter')
+    testRuntimeOnly('org.junit.platform:junit-platform-launcher')
+
+    functionalTestImplementation(platform('org.junit:junit-bom:5.9.2'))
+    functionalTestImplementation('org.junit.jupiter:junit-jupiter')
+    functionalTestImplementation('org.junit.platform:junit-platform-engine')
+    functionalTestImplementation('org.junit.platform:junit-platform-launcher')
+    functionalTestImplementation('org.junit.platform:junit-platform-reporting')
+}
+
+// Navigator 1.1.10 needs GTNHLib 0.11.x. GTNHLib 0.11 brings GTNHExtLib, and Windows Defender quarantines
+// GTNHExtLib-1.0.4.jar (Trojan:Win32/Egairtigado!rfn). Use the versions GTNH 2.9.0 ships: GTNHLib 0.11.54 and
+// GTNHExtLib 1.0.5.
+configurations.configureEach {
+    resolutionStrategy.eachDependency { details ->
+        if (details.requested.group == "com.github.GTNewHorizons") {
+            if (details.requested.name == "GTNHLib") details.useVersion("0.11.54")
+            if (details.requested.name == "GTNHExtLib") details.useVersion("1.0.5")
+        }
+    }
 }

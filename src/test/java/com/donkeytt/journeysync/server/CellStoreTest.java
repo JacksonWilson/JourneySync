@@ -1,30 +1,29 @@
-package com.donkeytt.journeysync;
+package com.donkeytt.journeysync.server;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.util.Collections;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import com.donkeytt.journeysync.data.TileId;
-import com.donkeytt.journeysync.server.CellStore;
+import com.donkeytt.journeysync.data.TileImageTest;
 
 public class CellStoreTest {
 
-    @Rule
-    public TemporaryFolder tmp = new TemporaryFolder();
+    @TempDir
+    File root;
 
     private static final TileId A = new TileId(0, TileId.DAY, 0, 0);
     private static final TileId B = new TileId(-1, (byte) 3, -2, 4);
 
     @Test
     public void changedCellsGetIncreasingRevisionsAndUnchangedOnesDont() throws Exception {
-        CellStore store = new CellStore(tmp.getRoot(), 4);
+        CellStore store = new CellStore(root, 4);
         store.load();
         int[] changed = store
             .merge(A, new int[] { 1, 2 }, new int[][] { TileImageTest.cell(0xFF000001), TileImageTest.cell(0) }, false);
@@ -40,7 +39,7 @@ public class CellStoreTest {
 
     @Test
     public void reloadKeepsPixelsRevisionsAndWorldId() throws Exception {
-        File root = tmp.getRoot();
+
         CellStore store = new CellStore(root, 4);
         store.load();
         String worldId = store.worldId();
@@ -61,7 +60,7 @@ public class CellStoreTest {
 
     @Test
     public void evictionWritesDirtyTilesFirst() throws Exception {
-        CellStore store = new CellStore(tmp.getRoot(), 4);
+        CellStore store = new CellStore(root, 4);
         store.load();
         for (int x = 0; x < 10; x++) {
             store.merge(

@@ -20,10 +20,10 @@ import com.donkeytt.journeysync.data.CellPatch;
 import com.donkeytt.journeysync.data.TileId;
 import com.donkeytt.journeysync.data.TileImage;
 import com.donkeytt.journeysync.data.WaypointRecord;
+import com.donkeytt.journeysync.network.Blobs;
 import com.donkeytt.journeysync.network.PacketHandler;
 import com.donkeytt.journeysync.network.packets.BlobPacket;
 import com.donkeytt.journeysync.network.packets.CellPatchPacket;
-import com.donkeytt.journeysync.network.packets.HelloAckPacket;
 import com.donkeytt.journeysync.network.packets.HelloPacket;
 import com.donkeytt.journeysync.network.packets.SyncMarkPacket;
 
@@ -31,8 +31,8 @@ import cpw.mods.fml.common.network.simpleimpl.IMessage;
 
 /**
  * The server side of map sharing. Network handlers and game events only queue work; one worker thread merges uploads
- * into the {@link CellStore}, sends each player what they're missing, and does all sending, because FML's channel
- * isn't safe to write from several threads.
+ * into the {@link CellStore} and sends each player what they're missing, through a per-player queue so it can be
+ * rate-limited.
  */
 public final class ServerSync {
 
@@ -203,14 +203,15 @@ public final class ServerSync {
     }
 
     private void handleHello(EntityPlayerMP player, HelloPacket hello) {
+        // The client only says hello after our login greeting told it our protocol, so a mismatch means a broken
+        // client.
         if (hello.protocolVersion != PacketHandler.PROTOCOL_VERSION) {
             JourneySync.LOG.warn(
-                "{} has JourneySync protocol {} ({}); this server uses {}. Not syncing with them.",
+                "{} sent JourneySync protocol {} ({}); this server uses {}. Not syncing with them.",
                 player.getCommandSenderName(),
                 hello.protocolVersion,
                 hello.modVersion,
                 PacketHandler.PROTOCOL_VERSION);
-            send(player, new HelloAckPacket(PacketHandler.PROTOCOL_VERSION, store.worldId()));
             return;
         }
         Session s = new Session(player);
@@ -219,10 +220,7 @@ public final class ServerSync {
             .equals(hello.worldId) ? Math.max(0, hello.lastRev) : 0;
         List<TileId> tiles = store.tilesNewerThan(since);
         s.catchUp = new CatchUp(tiles, since, store.rev());
-        s.queue.add(new Outgoing(new HelloAckPacket(PacketHandler.PROTOCOL_VERSION, store.worldId()), 40));
-        for (BlobPacket p : BlobPacket.split(PacketHandler.BLOB_WAYPOINTS_FULL, BlobPacket.gzip(waypoints.toJson()))) {
-            s.queue.add(new Outgoing(p, p.data.length + 8));
-        }
+        queueWaypoints(s);
         JourneySync.LOG.info(
             "{} joined with JourneySync {}: sending {} tiles changed since revision {}",
             player.getCommandSenderName(),
@@ -266,11 +264,13 @@ public final class ServerSync {
                 .toString(),
             op) == null) return;
         waypointsDirty = true;
-        byte[] blob = BlobPacket.gzip(waypoints.toJson());
-        for (Session s : sessions.values()) {
-            for (BlobPacket p : BlobPacket.split(PacketHandler.BLOB_WAYPOINTS_FULL, blob)) {
-                s.queue.add(new Outgoing(p, p.data.length + 8));
-            }
+        for (Session s : sessions.values()) queueWaypoints(s);
+    }
+
+    /** Queues the whole waypoint list, the way every change is sent. */
+    private void queueWaypoints(Session s) {
+        for (BlobPacket p : PacketHandler.blobPackets(PacketHandler.BLOB_WAYPOINTS, Blobs.gzip(waypoints.toJson()))) {
+            s.queue.add(new Outgoing(p, p.size()));
         }
     }
 
@@ -302,10 +302,15 @@ public final class ServerSync {
 
     private void send(EntityPlayerMP player, IMessage message) {
         try {
-            PacketHandler.wrapper.sendTo(message, player);
+            PacketHandler.sendTo(message, player);
         } catch (Exception e) {
             JourneySync.LOG.debug("Couldn't send to {}: {}", player.getCommandSenderName(), e.toString());
         }
+    }
+
+    /** The shared map's id, for the login greeting. Empty before the server has started. */
+    public String worldId() {
+        return store == null ? "" : store.worldId();
     }
 
     /** One line for the server log or a command. */

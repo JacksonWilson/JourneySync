@@ -15,16 +15,22 @@ import cpw.mods.fml.common.event.FMLServerStartingEvent;
 import cpw.mods.fml.common.event.FMLServerStoppingEvent;
 
 /**
+ * JourneySync: a shared JourneyMap map for everyone on a server, shared waypoints, and a map layer showing chunk
+ * loading and claims.
+ *
+ * <p>
  * {@code acceptableRemoteVersions = "*"}: FML never refuses a connection over JourneySync, so players without it can
  * join and players on different builds can still play together. Whether two sides sync is decided by JourneySync's
  * own handshake ({@code PacketHandler.PROTOCOL_VERSION}).
+ * </p>
  */
 @Mod(
     modid = JourneySync.MODID,
     version = Tags.VERSION,
     name = "JourneySync",
     acceptedMinecraftVersions = "[1.7.10]",
-    acceptableRemoteVersions = "*")
+    acceptableRemoteVersions = "*",
+    dependencies = "after:journeymap;after:navigator;after:serverutilities")
 public class JourneySync {
 
     public static final String MODID = "journeysync";

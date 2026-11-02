@@ -8,22 +8,25 @@ import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
 import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import io.netty.buffer.ByteBuf;
 
-/** Server to client: the server's protocol and the id of its shared map. */
-public class HelloAckPacket implements IMessage {
+/**
+ * Server to client, at login: this server has JourneySync, speaks this protocol, and its shared map has this id.
+ * Players without JourneySync ignore it. Nothing is ever sent to a server that didn't send this.
+ */
+public class ServerHelloPacket implements IMessage {
 
     public int protocolVersion;
     public String worldId;
 
-    public HelloAckPacket() {}
+    public ServerHelloPacket() {}
 
-    public HelloAckPacket(int protocolVersion, String worldId) {
+    public ServerHelloPacket(int protocolVersion, String worldId) {
         this.protocolVersion = protocolVersion;
         this.worldId = worldId;
     }
 
     @Override
     public void fromBytes(ByteBuf buf) {
-        protocolVersion = BufUtil.readVarInt(buf, 1);
+        protocolVersion = BufUtil.readVarInt(buf, 2);
         worldId = ByteBufUtils.readUTF8String(buf);
     }
 
@@ -33,12 +36,12 @@ public class HelloAckPacket implements IMessage {
         ByteBufUtils.writeUTF8String(buf, worldId == null ? "" : worldId);
     }
 
-    public static class Handler implements IMessageHandler<HelloAckPacket, IMessage> {
+    public static class Handler implements IMessageHandler<ServerHelloPacket, IMessage> {
 
         @Override
-        public IMessage onMessage(HelloAckPacket message, MessageContext ctx) {
+        public IMessage onMessage(ServerHelloPacket message, MessageContext ctx) {
             ClientSync.instance()
-                .onHelloAck(message);
+                .onServerHello(message.protocolVersion, message.worldId);
             return null;
         }
     }

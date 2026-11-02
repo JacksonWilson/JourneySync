@@ -1,10 +1,56 @@
-// Dev-run options for testing sync with several clients on one machine.
+// Extra build logic: unit tests on JUnit 5, in-game functional tests in a headless dev server, and dev-run options.
+//   gradlew runServer -Pft                                     run the functional tests on a dev server, then exit
+//                                                              (reports in run/server/junit-out; exit code 1 on failure)
+//   gradlew runServer -Pdemo                                   add a furnace force-loaded by a ticket for "Steve" near
+//                                                              spawn, for the chunk layer smoke test
 //   gradlew runClient -Pjoin=127.0.0.1:25570                   connect to a server after the main menu loads
+//   gradlew runClient -Psmoke                                  check the chunk layer in game, write a report, and quit
 //   gradlew runClient -PclientDir=run/client2 -Pusername=Alex  a second client with its own game folder
 //                                                              (JourneyMap data, configs) and player name
 //   -PheapMb=1536                                              max heap for runClient/runServer (RFG default is 4-6 GB)
 //   -PwithoutJourneySync                                       run a client or server without this mod, to test
 //                                                              mixed setups (JourneyMap and RCON Fix stay)
+// The functional test pattern comes from ModularUI2's addon.gradle.
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+    }
+}
+
+SourceSet functionalTestSet = null
+
+sourceSets {
+    functionalTestSet = create("functionalTest") {
+        java {
+            srcDir("src/functionalTest/java")
+            compileClasspath += sourceSets.patchedMc.output + sourceSets.main.output
+        }
+    }
+}
+
+configurations { configs ->
+    named(functionalTestSet.compileClasspathConfigurationName).configure { it.extendsFrom(named("compileClasspath").get()) }
+    named(functionalTestSet.runtimeClasspathConfigurationName).configure { it.extendsFrom(named("runtimeClasspath").get()) }
+    named(functionalTestSet.annotationProcessorConfigurationName).configure { it.extendsFrom(named("annotationProcessor").get()) }
+}
+
+tasks.register(functionalTestSet.jarTaskName, Jar) {
+    from(functionalTestSet.output)
+    archiveClassifier.set("functionalTests")
+    archiveVersion.set("1.0")
+    destinationDirectory.set(new File(buildDir, "tmp"))
+}
+
+// The functional test mod is always on the dev server's classpath; -Pft makes it run the tests.
+tasks.named("runServer", JavaExec).configure {
+    dependsOn(functionalTestSet.jarTaskName)
+    classpath(configurations.named(functionalTestSet.runtimeClasspathConfigurationName), tasks.named(functionalTestSet.jarTaskName))
+    if (project.hasProperty("ft")) systemProperty("journeysync.functionalTests", "true")
+    if (project.hasProperty("demo")) systemProperty("journeysync.demo", "true")
+}
 
 tasks.named("runClient", JavaExec).configure {
     if (project.hasProperty("join")) {
@@ -17,6 +63,7 @@ tasks.named("runClient", JavaExec).configure {
     if (project.hasProperty("username")) {
         username = project.property("username").toString()
     }
+    if (project.hasProperty("smoke")) systemProperty("journeysync.smoke", "true")
 }
 
 // RCON Fix is a core mod; FML only loads core mods from the classpath when they're named here.
@@ -32,7 +79,8 @@ if (hasRconFix) {
 
 if (project.hasProperty("withoutJourneySync")) {
     // Dev runs load this mod from build/libs/journeysync-*-dev.jar; its late Mixins are found by scanning it, so
-    // dropping the jar (and the class folders, in case a run uses those) leaves a run without JourneySync.
+    // dropping the jar (and the class folders, in case a run uses those) leaves a run without JourneySync. The
+    // functional test mod requires JourneySync, so it goes too.
     String libsDir = file("build/libs").absolutePath
     List<String> classDirs = [file("build/classes/java/main").absolutePath, file("build/resources/main").absolutePath]
     ["runClient", "runServer"].each { name ->
@@ -40,7 +88,9 @@ if (project.hasProperty("withoutJourneySync")) {
             doFirst {
                 classpath = classpath.filter { f ->
                     !(f.parentFile?.absolutePath == libsDir && f.name.startsWith("journeysync-")) &&
-                        !classDirs.contains(f.absolutePath)
+                        !classDirs.contains(f.absolutePath) &&
+                        !f.name.contains("functionalTests") &&
+                        !f.absolutePath.contains("${File.separator}functionalTest${File.separator}")
                 }
             }
         }

@@ -21,10 +21,16 @@ public final class JmBridge {
 
     private JmBridge() {}
 
-    /** True once JourneyMap is mapping, which means it has settled on the folder for this world. */
+    /** True once JourneyMap is mapping. It may still move to another folder when the world id arrives. */
     public static boolean isMapping() {
         JourneymapClient jm = JourneymapClient.getInstance();
         return jm != null && Boolean.TRUE.equals(jm.isMapping());
+    }
+
+    /** The world id JourneyMap Server sent for this world, or null if none has arrived (or the server has none). */
+    public static String currentWorldId() {
+        JourneymapClient jm = JourneymapClient.getInstance();
+        return jm == null ? null : jm.getCurrentWorldId();
     }
 
     /** JourneyMap's folder for the current world, or null. Main thread: it may move a legacy folder. */

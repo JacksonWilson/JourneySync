@@ -1,19 +1,17 @@
-package com.donkeytt.journeysync;
+package com.donkeytt.journeysync.data;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 
-import org.junit.Test;
-
-import com.donkeytt.journeysync.data.TileImage;
+import org.junit.jupiter.api.Test;
 
 public class TileImageTest {
 
-    static int[] cell(int color) {
+    public static int[] cell(int color) {
         int[] c = new int[TileImage.CELL_PIXELS];
         Arrays.fill(c, color);
         return c;

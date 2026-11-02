@@ -1,17 +1,13 @@
-package com.donkeytt.journeysync;
+package com.donkeytt.journeysync.data;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Random;
 
-import org.junit.Test;
-
-import com.donkeytt.journeysync.data.CellPatch;
-import com.donkeytt.journeysync.data.TileId;
-import com.donkeytt.journeysync.data.TileImage;
+import org.junit.jupiter.api.Test;
 
 public class CellPatchTest {
 
