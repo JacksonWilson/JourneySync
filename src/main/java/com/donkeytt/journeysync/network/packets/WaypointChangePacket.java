@@ -42,7 +42,7 @@ public class WaypointChangePacket implements IMessage {
         @Override
         public IMessage onMessage(WaypointChangePacket message, MessageContext ctx) {
             try {
-                com.donkeytt.journeysync.server.ServerSyncManager.instance()
+                com.donkeytt.journeysync.server.ServerSync.instance()
                     .onWaypointChange(ctx.getServerHandler().playerEntity, message.record);
             } catch (Throwable t) {
                 JourneySync.LOG.error("Failed handling waypoint change", t);

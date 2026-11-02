@@ -11,83 +11,76 @@ public class Config {
 
     public static final String CATEGORY_GENERAL = "general";
     public static final String CATEGORY_TRANSFER = "transfer";
+    public static final String CATEGORY_SERVER = "server";
 
-    // general
+    // general (client)
     public static boolean uploadEnabled = true;
     public static boolean downloadEnabled = true;
+    public static boolean seedExistingMap = true;
     public static boolean logDebug = false;
 
-    // transfer
-    /** 0 = unlimited */
-    public static int rateLimitKBps = 0;
-    public static int scanIntervalSeconds = 2;
-    public static int chunkSizeBytes = 24 * 1024;
-    public static int maxTileBytes = 32 * 1024 * 1024;
-    /** 0 = upload as soon as a change is detected (no debounce) */
-    public static int uploadSettleSeconds = 2;
-    /** 0 = no cooldown between uploads of the same tile */
-    public static int tileUploadCooldownSeconds = 60;
+    // transfer (client)
+    public static int uploadIntervalMillis = 2000;
+    public static int uploadKBps = 256;
+
+    // server
+    public static boolean serverAcceptUploads = true;
+    public static int serverSendKBps = 1024;
+    public static int serverTileCache = 32;
 
     public static void synchronizeConfiguration(File configFile) {
         Configuration configuration = new Configuration(configFile);
-
         uploadEnabled = configuration.getBoolean(
             "uploadEnabled",
             CATEGORY_GENERAL,
             uploadEnabled,
-            "Upload locally rendered map tiles/waypoints to the server");
+            "Send the chunks your JourneyMap draws to the server");
         downloadEnabled = configuration.getBoolean(
             "downloadEnabled",
             CATEGORY_GENERAL,
             downloadEnabled,
-            "Download map tiles/waypoints shared by other players");
+            "Draw the chunks other players have explored, and their shared waypoints");
+        seedExistingMap = configuration.getBoolean(
+            "seedExistingMap",
+            CATEGORY_GENERAL,
+            seedExistingMap,
+            "The first time you join a server, upload the map you already had for it. It only fills places the "
+                + "shared map has never seen, so it never overwrites newer data.");
         logDebug = configuration.getBoolean("logDebug", CATEGORY_GENERAL, logDebug, "Verbose debug logging");
-
-        rateLimitKBps = configuration.getInt(
-            "rateLimitKBps",
+        uploadIntervalMillis = configuration.getInt(
+            "uploadIntervalMillis",
             CATEGORY_TRANSFER,
-            rateLimitKBps,
+            uploadIntervalMillis,
+            250,
+            60_000,
+            "How often freshly drawn chunks are sent to the server");
+        uploadKBps = configuration.getInt(
+            "uploadKBps",
+            CATEGORY_TRANSFER,
+            uploadKBps,
             0,
             1024 * 1024,
-            "Transfer rate limit in KB/s (0 = unlimited)");
-        scanIntervalSeconds = configuration.getInt(
-            "scanIntervalSeconds",
-            CATEGORY_TRANSFER,
-            scanIntervalSeconds,
-            1,
-            120,
-            "How often the local JourneyMap cache is scanned for changes");
-        chunkSizeBytes = configuration.getInt(
-            "chunkSizeBytes",
-            CATEGORY_TRANSFER,
-            chunkSizeBytes,
-            4 * 1024,
-            28 * 1024,
-            "Network chunk payload size in bytes (must stay below 32767)");
-        maxTileBytes = configuration.getInt(
-            "maxTileBytes",
-            CATEGORY_TRANSFER,
-            maxTileBytes,
+            "Upload limit in KB/s (0 = unlimited). Mostly matters for the one-time upload of an existing map.");
+        serverAcceptUploads = configuration.getBoolean(
+            "acceptUploads",
+            CATEGORY_SERVER,
+            serverAcceptUploads,
+            "Server only: merge chunks players send into the shared map");
+        serverSendKBps = configuration.getInt(
+            "sendKBpsPerPlayer",
+            CATEGORY_SERVER,
+            serverSendKBps,
+            0,
             1024 * 1024,
-            256 * 1024 * 1024,
-            "Sanity limit for a single tile transfer");
-        uploadSettleSeconds = configuration.getInt(
-            "uploadSettleSeconds",
-            CATEGORY_TRANSFER,
-            uploadSettleSeconds,
-            0,
-            60,
-            "Wait until a changed tile file has stayed unchanged this many seconds before uploading"
-                + " (debounces re-renders while moving; 0 = off)");
-        tileUploadCooldownSeconds = configuration.getInt(
-            "tileUploadCooldownSeconds",
-            CATEGORY_TRANSFER,
-            tileUploadCooldownSeconds,
-            0,
-            3600,
-            "After uploading a tile, wait this many seconds before uploading that tile again unless it"
-                + " grew significantly (suppresses cosmetic re-render jitter; 0 = off)");
-
+            "Server only: how fast the shared map is sent to each player, in KB/s (0 = unlimited). A new player "
+                + "receives the whole map once.");
+        serverTileCache = configuration.getInt(
+            "tileCache",
+            CATEGORY_SERVER,
+            serverTileCache,
+            4,
+            4096,
+            "Server only: region tiles kept in memory, about 1 MB each");
         if (configuration.hasChanged()) {
             configuration.save();
         }

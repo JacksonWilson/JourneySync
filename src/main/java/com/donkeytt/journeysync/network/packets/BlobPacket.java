@@ -6,7 +6,7 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import com.donkeytt.journeysync.JourneySync;
-import com.donkeytt.journeysync.client.ClientSyncManager;
+import com.donkeytt.journeysync.client.ClientSync;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -108,7 +108,7 @@ public class BlobPacket implements IMessage {
         @Override
         public IMessage onMessage(BlobPacket message, MessageContext ctx) {
             try {
-                ClientSyncManager.instance()
+                ClientSync.instance()
                     .onBlobFragment(message);
             } catch (Throwable t) {
                 JourneySync.LOG

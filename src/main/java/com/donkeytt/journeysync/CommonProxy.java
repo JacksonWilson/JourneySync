@@ -2,8 +2,7 @@ package com.donkeytt.journeysync;
 
 import java.io.File;
 
-import com.donkeytt.journeysync.server.ServerEventHandler;
-import com.donkeytt.journeysync.server.ServerSyncManager;
+import com.donkeytt.journeysync.server.ServerSync;
 
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
@@ -29,11 +28,12 @@ public class CommonProxy {
             .worldServerForDimension(0)
             .getSaveHandler()
             .getWorldDirectory();
-        ServerEventHandler.initStorage(worldDir);
+        ServerSync.instance()
+            .start(worldDir);
     }
 
     public void serverStopping(FMLServerStoppingEvent event) {
-        ServerSyncManager.instance()
-            .shutdown();
+        ServerSync.instance()
+            .stop();
     }
 }

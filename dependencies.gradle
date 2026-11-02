@@ -34,12 +34,27 @@
  * For more details, see https://docs.gradle.org/8.0.1/userguide/java_library_plugin.html#sec:java_library_configurations_graph
  */
 dependencies {
-    // JourneyMap (dev runtime only, reflection integration — not a compile or publish dependency).
-    // Copy journeymap-1.7.10-5.2.10-unlimited.jar into libs/ (gitignored).
-    // Optional: the integration is reflection-based, so CI builds work without the jar.
-    def jmJar = file("libs/journeymap-1.7.10-5.2.10-unlimited.jar")
-    if (jmJar.exists()) {
+    // JourneyMap 5: the Mixins and JmBridge compile against it; it's never bundled or published.
+    // Dev runs use journeymap-1.7.10-5.2.23-unlimited.jar (GTNH 2.9.0) or -5.2.10-unlimited.jar (GTNH 2.8.x) from
+    // libs/ (gitignored), or -PjourneymapJar=<path>. Without one, Modrinth's 5.2.20, the build Navigator compiles
+    // against, is used; the classes JourneySync touches are the same across 5.2.x.
+    String jmJarProperty = project.findProperty("journeymapJar")
+    def jmJar = jmJarProperty ? file(jmJarProperty) : ["5.2.23", "5.2.10"]
+        .collect { file("libs/journeymap-1.7.10-${it}-unlimited.jar") }
+        .find { it.exists() }
+    if (jmJar != null && jmJar.exists()) {
         devOnlyNonPublishable(rfg.deobf(files(jmJar)))
+    } else {
+        devOnlyNonPublishable(rfg.deobf("maven.modrinth:journeymap:5.2.20"))
+    }
+    // RCON Fix (dev server only): makes RCON work on 1.7.10 so test scripts can send console commands.
+    // Optional: put rconfix-*-dev.jar in libs/, or build the gtnh-rcon-fix repo next to this one. addon.gradle loads
+    // its core mod in runServer.
+    def rconFixJar = (fileTree("libs") { include "rconfix-*-dev.jar" } + fileTree("../gtnh-rcon-fix/build/libs") {
+        include "rconfix-*-dev.jar"
+    }).files.find { true }
+    if (rconFixJar != null) {
+        runtimeOnlyNonPublishable(files(rconFixJar))
     }
     testImplementation("junit:junit:4.13.2")
     //runtimeOnlyNonPublishable("com.github.GTNewHorizons:NotEnoughItems:2.7.69-GTNH:dev")
